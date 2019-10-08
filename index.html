@@ -1,0 +1,54 @@
+<!doctype html>
+<html class="no-js" lang="">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <title>Vertical Truncator - Vertically truncates text based on provided number of lines</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+        <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+        <script type="text/javascript" src="jquery.vertical-truncator.js"></script>
+        <style>
+            .wrapper {
+                width: 40%;
+                font-size: 20px;
+            }
+
+            h1 {
+                font-size: inherit;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <main>
+                <section class="hero">
+                    <div class="table">
+                        <div class="cell">
+                            <h1 class="serif">Vertical Truncator</h1>
+                            <p>Vertically truncates text based on provided number of lines</p>
+                        </div>
+                    </div>
+                </section>
+                <section class="demo">
+                    <div class="wrapper">
+                        <h1>
+                            <a href="#" data-vertical-truncator="3">Contrary to popular belief, Lorem Ipsum is not simply random text</a>
+                        </h1>
+                    </div>
+                    <div class="wrapper">
+                        <h1 data-vertical-truncator="3">
+                            The actual size of the character that a user sees is dependent both on the author-defined size and the user's display or user-agent settings. For many mainstream body text fonts, 14 and 18 point is roughly equivalent to 1.2 and 1.5 em or to 120% or 150% of the default size for body text (assuming that the body font is 100%),
+                        </h1>
+                    </div>
+                </div>
+            </main>
+        </div>
+        <script type="text/javascript">
+            jQuery(document).ready(function() {
+                vertically_truncate();
+            });
+        </script>
+    </body>
+</html>
