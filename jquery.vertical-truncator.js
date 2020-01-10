@@ -18,9 +18,17 @@
 		var text_pts = text.split(' ');
 
 		if (!ending) {
-			ending = '...';
+			ending = '<span class="ending">... <a href="#">View More</a></span>';
 		}
 
+		var $ending = $(ending);
+		var $ending_link = $ending.find('a')
+		if ($ending_link.length) {
+			$ending_link.on('click', function() {
+				$source.addClass('stop-vertical-truncate');
+				$source.text($source.data('vertical-truncator-original'));
+			});
+		}
 
 		var line_height = $source.css('line-height');
 		var font_size = parseInt($source.css('font-size'), 10);
@@ -32,7 +40,6 @@
 		}
 
 		var h = line_height * parseInt($source.data('vertical-truncator'));
-		console.log(h);
 
 		$('body').append($tester);
 
@@ -56,7 +63,8 @@
 			var pt = text_pts[i];
 			res_arr.push(pt);
 			$tester.empty();
-			$tester.text(res_arr.join(' ').replace(/[,\.\s]*$/g, '') + ending);
+			$tester.text(res_arr.join(' ').replace(/[,\.\s]*$/g, ''));
+			$tester.append(ending);
 
 			if ($tester.height() <= h) {
 				res_arr_last.push(pt);
@@ -69,20 +77,28 @@
 		var result = res_arr_last.join(' ');
 		result = result.replace(/[,\.\s]*$/g, '');
 
-		if (text.length !== result.length) {
-			result += ending;
-		}
-
 		$source.text(result);
 
+		if (text.length !== result.length) {
+			$source.append($ending);
+		}
+
 		$source.trigger('vertical-truncator');
+		
+		$source.css({
+			'height': 'auto',
+			'overflow': 'auto'
+		});
 
 		if (callback) {
 			callback();
 		}
 
 		if (!$source.hasClass('vertically-truncated')) {
-			$(window).on('resize', function(){
+			$(window).on('resize', function() {
+				if ($source.hasClass('stop-vertical-truncate')) {
+					return;
+				}
 				vertical_truncator($source, ending, callback);
 			});
 		}
