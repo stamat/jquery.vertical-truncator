@@ -1,12 +1,20 @@
 // https://github.com/stamat/jquery.vertical-truncateor
 (function ($) {
-	function vertical_truncator($source, ending, callback) {
+	function vertical_truncator($source, ending, $trigger, animation_duration, callback) {
 		var $tester = $('<div></div>');
 		var text = $source.text();
+
+
+		//TODO: do a source clone absolute hidden and pointer events none so we can always know the height of source regardless of the width
+		if (!$source.data('vertical-truncator-original-height')) {
+			var source_height = $source.height();
+			$source.data('vertical-truncator-original-height', source_height);
+		}
+
 		if ($source.data('vertical-truncator-original')) {
-			text = $source.data('vertical-truncator-original');
+			text = $($source.data('vertical-truncator-original')).text();
 		} else {
-			$source.data('vertical-truncator-original', text);
+			$source.data('vertical-truncator-original', $source.html());
 		}
 
 		//TODO: if old width, font-size and line-height differ on resize perform truncate
@@ -15,19 +23,42 @@
 			$source.data('vertical-truncator-width', w);
 		}
 
-		var text_pts = text.split(' ');
-
-		if (!ending) {
+		if (ending === undefined || ending === null) {
 			ending = '<span class="ending">... <a href="#">View More</a></span>';
 		}
 
+		function expand() {
+			$source.addClass('stop-vertical-truncate');
+			$source.html($source.data('vertical-truncator-original'));
+		}
+
+		function collapse() {
+			$source.removeClass('stop-vertical-truncate');
+			vertical_truncator($source, ending, $trigger, animation_duration, callback);
+		}
+
 		var $ending = $(ending);
-		var $ending_link = $ending.find('a')
-		if ($ending_link.length) {
-			$ending_link.on('click', function() {
-				$source.addClass('stop-vertical-truncate');
-				$source.text($source.data('vertical-truncator-original'));
-			});
+		var $trig = $ending.find('a');
+
+		if ($trigger && $trigger.length) {
+			$trig = $trigger;
+		}
+
+		if ($trig.length) {
+			if (!$trig.hasClass('bound')) {
+				$trig.addClass('bound');
+				$trig.on('click', function(e) {
+					e.preventDefault();
+
+					if ($trig.hasClass('active')) {
+						$trig.removeClass('active');
+						collapse();
+					} else {
+						$trig.addClass('active');
+						expand();
+					}
+				});
+			}
 		}
 
 		var line_height = $source.css('line-height');
@@ -39,7 +70,7 @@
 			line_height = parseInt(line_height, 10);
 		}
 
-		var h = line_height * parseInt($source.data('vertical-truncator'));
+		var h = line_height * parseInt($source.data('vertical-truncator'), 10);
 
 		$('body').append($tester);
 
@@ -58,6 +89,8 @@
 
 		var res_arr_last = [];
 		var res_arr = [];
+
+		var text_pts = text.split(' ');
 
 		for	(var i = 0; i < text_pts.length; i++) {
 			var pt = text_pts[i];
@@ -84,14 +117,9 @@
 		}
 
 		$source.trigger('vertical-truncator');
-		
-		$source.css({
-			'height': 'auto',
-			'overflow': 'auto'
-		});
 
 		if (callback) {
-			callback();
+			callback($source);
 		}
 
 		if (!$source.hasClass('vertically-truncated')) {
@@ -99,7 +127,7 @@
 				if ($source.hasClass('stop-vertical-truncate')) {
 					return;
 				}
-				vertical_truncator($source, ending, callback);
+				vertical_truncator($source, ending, $trigger, animation_duration, callback);
 			});
 		}
 
@@ -108,13 +136,13 @@
 
 	window.vertical_truncator = vertical_truncator;
 
-	$.fn.vertical_truncator = function(ending, callback) {
-		vertical_truncator($($this), ending, callback);
+	$.fn.vertical_truncator = function(ending, $trigger, animation_duration, callback) {
+		vertical_truncator($(this), ending, $trigger, animation_duration, callback);
 	};
 
-	window.vertically_truncate = function(ending, callback) {
+	window.vertically_truncate = function(ending, $trigger, animation_duration, callback) {
 		$('[data-vertical-truncator]').each(function() {
-			vertical_truncator($(this), ending, callback);
+			vertical_truncator($(this), ending, $trigger, animation_duration, callback);
 		});
 	};
 })(jQuery);
