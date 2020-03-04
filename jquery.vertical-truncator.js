@@ -1,26 +1,30 @@
 // https://github.com/stamat/jquery.vertical-truncateor
 (function ($) {
 	function vertical_truncator($source, ending, $trigger, animation_duration, callback) {
-		var $tester = $('<div></div>');
-		var text = $source.text();
 
+		if (!$source.hasClass('vertically-truncated')) {
+			$source.parent().css('position', 'relative');
+			var $clone = $('<div />');
+			var rouge_css = {
+				'position': 'absolute',
+				'visibility': 'hidden',
+				'pointer-events': 'none'
+			};
 
-		//TODO: do a source clone absolute hidden and pointer events none so we can always know the height of source regardless of the width
-		if (!$source.data('vertical-truncator-original-height')) {
-			var source_height = $source.height();
-			$source.data('vertical-truncator-original-height', source_height);
-		}
+			$clone.css(rouge_css);
+			$clone.addClass('vartical-truncator-clone');
+			$clone.addClass($source.attr('class'));
+			$clone.append($source.html());
 
-		if ($source.data('vertical-truncator-original')) {
-			text = $($source.data('vertical-truncator-original')).text();
-		} else {
-			$source.data('vertical-truncator-original', $source.html());
-		}
+			var $tester = $('<div />');
+			$tester.addClass('vartical-truncator-tester');
+			$tester.css(rouge_css);
 
-		//TODO: if old width, font-size and line-height differ on resize perform truncate
-		var w = $source.width();
-		if (!$source.data('vertical-truncator-width')) {
-			$source.data('vertical-truncator-width', w);
+			var $parent = $source.parent();
+			$parent.append($clone);
+			$parent.append($tester);
+
+			$source.addClass('vertically-truncated');
 		}
 
 		if (ending === undefined || ending === null) {
@@ -29,12 +33,47 @@
 
 		function expand() {
 			$source.addClass('stop-vertical-truncate');
-			$source.html($source.data('vertical-truncator-original'));
+			var $clone = $source.parent().find('.vartical-truncator-clone');
+			$source.html($clone.html());
+
+			if (animation_duration) {
+				$source.height($clone.height());
+
+				setTimeout(function(){
+					$source.css({
+						'height': 'auto',
+						'overflow': 'auto'
+					});
+				}, animation_duration);
+			} else {
+				$source.css({
+					'height': 'auto',
+					'overflow': 'auto'
+				});
+			}
 		}
 
 		function collapse() {
 			$source.removeClass('stop-vertical-truncate');
-			vertical_truncator($source, ending, $trigger, animation_duration, callback);
+			var tr_obj = doTruncate($source, ending, callback);
+			var $clone = $source.parent().find('.vartical-truncator-clone');
+
+			if (animation_duration) {
+				$source.height($clone.height());
+				$source.css('overflow', 'hidden');
+				$source.height(tr_obj.tester_height);
+
+				setTimeout(function(){
+					$source.text(tr_obj.result);
+					$source.trigger('vertical-truncator');
+
+					if (tr_obj.text.length !== tr_obj.result.length) {
+						$source.append(ending);
+					}
+				}, animation_duration);
+			} else {
+				completeTruncate($source, ending, callback);
+			}
 		}
 
 		var $ending = $(ending);
@@ -61,77 +100,88 @@
 			}
 		}
 
-		var line_height = $source.css('line-height');
-		var font_size = parseInt($source.css('font-size'), 10);
+		function doTruncate($source, ending, callback) {
+			var $tester = $source.parent().find('.vartical-truncator-tester');
+			var $clone = $source.parent().find('.vartical-truncator-clone');
+			var text = $clone.text();
 
-		if (line_height === 'normal') {
-			line_height = font_size * 1.16; // 1.16 difference constant
-		} else {
-			line_height = parseInt(line_height, 10);
+			var line_height = $source.css('line-height');
+			var font_size = parseInt($source.css('font-size'), 10);
+
+			if (line_height === 'normal') {
+				line_height = font_size * 1.16; // 1.16 difference constant
+			} else {
+				line_height = parseInt(line_height, 10);
+			}
+
+			var h = line_height * parseInt($source.data('vertical-truncator'), 10);
+
+			//TODO: skip truncate if width didn't change
+			if (h === 0) {
+				return {
+					text: text,
+					tester_height: 0,
+					result: ''
+				}
+			}
+
+			var res_arr_last = [];
+			var res_arr = [];
+
+			var text_pts = text.split(' ');
+
+			for	(var i = 0; i < text_pts.length; i++) {
+				var pt = text_pts[i];
+				res_arr.push(pt);
+				$tester.empty();
+				$tester.text(res_arr.join(' ').replace(/[,\.\s]*$/g, ''));
+				$tester.append(ending);
+
+				if ($tester.height() <= h) {
+					res_arr_last.push(pt);
+				} else {
+					break;
+				}
+			}
+			var tester_height = $tester.height();
+			$tester.empty();
+
+			var result = res_arr_last.join(' ');
+			result = result.replace(/[,\.\s]*$/g, '');
+
+			return {
+				text: text,
+				tester_height: h,
+				result: result
+			};
 		}
 
-		var h = line_height * parseInt($source.data('vertical-truncator'), 10);
+		function completeTruncate($source, ending, callback) {
+			var tr_obj = doTruncate($source, ending, callback);
+			$source.text(tr_obj.result);
 
-		$('body').append($tester);
+			if (tr_obj.text.length !== tr_obj.result.length) {
+				$source.append(ending);
+			}
 
-		$tester.css({
-			width:	w,
-			'font-size': font_size + 'px',
-			'line-height': line_height + 'px',
-			'font-family': $source.css('font-family'),
-			'font-weight': $source.css('font-weight'),
-			'font-style': $source.css('font-style'),
-			'z-index': 0,
-			position: 'fixed',
-			left: '-9999px',
-			top: 0
-		});
+			$source.height(tr_obj.tester_height);
+			$source.css('overflow', 'hidden');
 
-		var res_arr_last = [];
-		var res_arr = [];
+			$source.trigger('vertical-truncator');
 
-		var text_pts = text.split(' ');
-
-		for	(var i = 0; i < text_pts.length; i++) {
-			var pt = text_pts[i];
-			res_arr.push(pt);
-			$tester.empty();
-			$tester.text(res_arr.join(' ').replace(/[,\.\s]*$/g, ''));
-			$tester.append(ending);
-
-			if ($tester.height() <= h) {
-				res_arr_last.push(pt);
-			} else {
-				break;
+			if (callback) {
+				callback($source);
 			}
 		}
-		$tester.remove();
 
-		var result = res_arr_last.join(' ');
-		result = result.replace(/[,\.\s]*$/g, '');
+		completeTruncate($source, ending, callback);
 
-		$source.text(result);
-
-		if (text.length !== result.length) {
-			$source.append($ending);
-		}
-
-		$source.trigger('vertical-truncator');
-
-		if (callback) {
-			callback($source);
-		}
-
-		if (!$source.hasClass('vertically-truncated')) {
-			$(window).on('resize', function() {
-				if ($source.hasClass('stop-vertical-truncate')) {
-					return;
-				}
-				vertical_truncator($source, ending, $trigger, animation_duration, callback);
-			});
-		}
-
-		$source.addClass('vertically-truncated');
+		$(window).on('resize', function() {
+			if ($source.hasClass('stop-vertical-truncate')) {
+				return;
+			}
+			completeTruncate($source, ending, callback);
+		});
 	}
 
 	window.vertical_truncator = vertical_truncator;
